@@ -15,8 +15,7 @@ defmodule Joken.Signer do
 
   Joken uses https://hex.pm/packages/jose to do signing and verification.
 
-  Note: By default, the 'none' algorithm is disabled. To enable it, set the
-  'allow_none_algorithm' key on the 'joken' app configuration to true
+  Note: By default, the 'none' algorithm is disabled. To enable it, call `enable_unsecured_signing`
   """
 
   @type jwk :: %{}
@@ -28,8 +27,13 @@ defmodule Joken.Signer do
   }
 
   @doc "Enables the use of `none` algorithm."
-  def configure_unsecured_signing() do
-    JOSE.unsecured_signing(none_algorithm_allowed?())
+  def enable_unsecured_signing() do
+    JOSE.unsecured_signing(true)
+  end
+
+  @doc "Disables the use of `none` algorithm."
+  def disable_unsecured_signing() do
+    JOSE.unsecured_signing(false)
   end
 
   defstruct [:jwk, :jws]
@@ -40,7 +44,7 @@ defmodule Joken.Signer do
   """
   @spec none(binary) :: Signer.t
   def none(secret) do
-    unless none_algorithm_allowed? do
+    unless JOSE.unsecured_signing do
       raise Joken.AlgorithmError, message: """
         'none' algorithm is not allowed.
         In order to use the 'none algorithm', the 'allow_none_algorithm' key on
@@ -268,10 +272,6 @@ defmodule Joken.Signer do
   end
   defp retrieve_claims(_) do
     raise ArgumentError, message: "Claims must be a map"
-  end
-
-  defp none_algorithm_allowed?() do
-    Application.get_env(:joken, :allow_none_algorithm, false)
   end
 
 end

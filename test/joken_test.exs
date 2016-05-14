@@ -357,8 +357,7 @@ defmodule Joken.Test do
   end
 
   test "none algorithm works when enabled" do
-      JOSE.unsecured_signing(true)
-      Application.put_env(:joken, :allow_none_algorithm, true)
+      Joken.Signer.enable_unsecured_signing()
 
       compact = @payload
       |> token
@@ -372,8 +371,7 @@ defmodule Joken.Test do
 
       assert token.header == %{"key" => "value"}
 
-      Application.put_env(:joken, :allow_none_algorithm, false)
-      JOSE.unsecured_signing(false)
+      Joken.Signer.disable_unsecured_signing()
   end
 
   # utility functions

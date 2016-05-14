@@ -15,8 +15,6 @@ defmodule JokenPlug.Test do
     @skip_auth private: %{joken_skip: true}
     @is_subject private: %{joken_verify: &MyPlugRouter.is_subject/0}
     @is_not_subject private: %{joken_verify: &MyPlugRouter.is_not_subject/0}
-    @is_subject_dep private: %{joken_on_verifying: &MyPlugRouter.is_subject/0}
-    @is_not_subject_dep private: %{joken_on_verifying: &MyPlugRouter.is_not_subject/0}
 
     plug :match
     plug Joken.Plug,
@@ -55,18 +53,6 @@ defmodule JokenPlug.Test do
     end
 
     post "/custom_function_failure", @is_not_subject do
-      conn
-      |> put_resp_content_type("text/plain")
-      |> send_resp(200, "I am subject 1234567890")
-    end
-
-    post "/custom_function_success_dep", @is_subject_dep do
-      conn
-      |> put_resp_content_type("text/plain")
-      |> send_resp(200, "I am subject 1234567890")
-    end
-
-    post "/custom_function_failure_dep", @is_not_subject_dep do
       conn
       |> put_resp_content_type("text/plain")
       |> send_resp(200, "I am subject 1234567890")
@@ -134,48 +120,6 @@ defmodule JokenPlug.Test do
     end
   end
 
-  defmodule OnVerifyingRouter do
-    use Plug.Router
-
-    plug :match
-    plug Joken.Plug, on_verifying: &OnVerifyingRouter.verify/0
-    plug :dispatch
-
-    get "/verify_token" do
-      conn
-      |> put_resp_content_type("text/plain")
-      |> send_resp(200, "Hello Tester")
-    end
-
-    def verify() do
-      %Token{}
-      |> with_json_module(Poison)
-      |> with_signer(hs256("secret"))
-    end
-  end
-
-  defmodule BothVerifyRouter do
-    use Plug.Router
-
-    plug :match
-    plug Joken.Plug, verify:       &BothVerifyRouter.verify/0,
-                     on_verifying: &BothVerifyRouter.verify/0
-    plug :dispatch
-
-
-    get "/verify_token" do
-      conn
-      |> put_resp_content_type("text/plain")
-      |> send_resp(200, "Hello Tester")
-    end
-
-    def verify() do
-      %Token{}
-      |> with_json_module(Poison)
-      |> with_signer(hs256("secret"))
-    end
-  end
-
   test "generates token properly" do
     conn = conn(:post, "/generate_token") |> MyPlugRouter.call([])
     assert conn.status == 200
@@ -234,50 +178,6 @@ defmodule JokenPlug.Test do
     conn = conn(:post, "/no_token_error") |> CustomErrorBodyRouter.call([])
     assert conn.status == 401
     assert conn.resp_body == ~s({"status":401,"message":"Unauthorized"})
-  end
-
-  test "generates token properly with deprecated on_verifying" do
-    token = simple_binary_token
-
-    conn = conn(:get, "/verify_token")
-    |> put_req_header("authorization", "Bearer " <> token)
-    |> OnVerifyingRouter.call([])
-
-    assert conn.status == 200
-    assert conn.resp_body == "Hello Tester"
-  end
-
-  test "generates token properly with both verify options supplied" do
-    token = simple_binary_token
-
-    conn = conn(:get, "/verify_token")
-    |> put_req_header("authorization", "Bearer " <> token)
-    |> BothVerifyRouter.call([])
-
-    assert conn.status == 200
-    assert conn.resp_body == "Hello Tester"
-  end
-
-  test "evaluates custom function for route deprecated (success)" do
-    token = simple_binary_token
-
-    conn = conn(:post, "/custom_function_success_dep")
-    |> put_req_header("authorization", "Bearer " <> token)
-    |> MyPlugRouter.call([])
-
-    assert conn.status == 200
-    assert conn.resp_body == "I am subject 1234567890"
-  end
-
-  test "evaluates custom function for route deprecated (failure)" do
-    token = simple_binary_token
-
-    conn = conn(:post, "/custom_function_failure_dep")
-    |> put_req_header("authorization", "Bearer " <> token)
-    |> MyPlugRouter.call([])
-
-    assert conn.status == 401
-    assert conn.resp_body == "Invalid payload"
   end
 
   defp simple_binary_token do

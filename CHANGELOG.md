@@ -1,3 +1,12 @@
+## v2.0.0-dev
+
+* Removed:
+    - `Joken.Plug`: `on_verifying` and `joken_on_verifying` have been removed and replaced with `verify` and  `joken_verify`
+    - `allow_none_algorithm` option has been removed.  To allow the `none` algorithm, just call `Joken.Signer.enabled_unsecured_signing()` once during your application's start
+
+* Changed:
+    - `Joken.Signer.configure_unsecured_signing()` renamed to `Joken.Signer.enable_unsecured_signing()`
+
 ## v1.2.0
 
 * Enhancements

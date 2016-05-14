@@ -104,7 +104,7 @@ if Code.ensure_loaded?(Plug.Conn) do
     def call(conn, {verify, on_error}) do
 
       unless Map.has_key?(conn.private, :joken_verify) do
-        conn = set_joken_verify(conn, verify)
+        conn = put_private(conn, :joken_verify, verify)
       end
 
       unless Map.has_key?(conn.private, :joken_on_error) do
@@ -119,36 +119,16 @@ if Code.ensure_loaded?(Plug.Conn) do
     end
 
     defp get_verify(options) do
-      case Keyword.take(options, [:verify, :on_verifying]) do
+      case Keyword.take(options, [:verify]) do
         [verify: verify] -> verify
-        [verify: verify, on_verifying: _] ->
-          warn_on_verifying
-          verify
-        [on_verifying: verify] ->
-          warn_on_verifying
-          verify
         [] ->
           warn_supply_verify_function
           nil
       end
     end
 
-    defp warn_on_verifying do
-      Logger.warn "on_verifying is deprecated for the Joken plug and will be removed in a future version. Please use verify instead."
-    end
-
     defp warn_supply_verify_function do
       Logger.warn "You need to supply a verify function to the Joken token."
-    end
-
-    defp set_joken_verify(conn, verify) do
-      case conn.private do
-        %{joken_on_verifying: deprecated_verify} ->
-          warn_on_verifying
-          put_private(conn, :joken_verify, deprecated_verify)
-        _ ->
-          put_private(conn, :joken_verify, verify)
-      end
     end
 
     defp parse_auth(conn, ["Bearer " <> incoming_token]) do
